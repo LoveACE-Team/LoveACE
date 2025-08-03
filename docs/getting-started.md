@@ -56,34 +56,7 @@ python main.py
 ### 5. 启动服务
 
 ```bash
-python main.py --reload
-```
-
-服务启动后，您可以访问：
-
-- **API服务**: http://localhost:8000
-- **API文档**: http://localhost:8000/docs
-- **Redoc文档**: http://localhost:8000/redoc
-
-## 验证安装
-
-访问健康检查接口验证服务是否正常运行：
-
-```bash
-curl http://localhost:8000/health
-```
-
-如果一切正常，您应该看到类似以下的响应：
-
-```json
-{
-  "code": 200,
-  "message": "服务运行正常",
-  "data": {
-    "status": "healthy",
-    "timestamp": "2024-01-01T12:00:00Z"
-  }
-}
+python main.py
 ```
 
 ## 下一步

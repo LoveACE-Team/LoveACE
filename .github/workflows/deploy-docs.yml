@@ -8,7 +8,7 @@ on:
       - 'docs/**'
       - 'openapi.json'
       - 'package.json'
-      - 'yarn.lock'
+      - 'pnpm-lock.yaml'
       - '.github/workflows/deploy-docs.yml'
   
   workflow_dispatch:
@@ -36,20 +36,22 @@ jobs:
       - name: 设置Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'yarn'
+          node-version: 22
+          cache: 'pnpm'
 
-      - name: 启用Yarn
-        run: corepack enable
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
 
       - name: 安装依赖
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 验证OpenAPI规范
-        run: yarn swagger:validate
+        run: pnpm swagger:validate
 
       - name: 检查Markdown文档
-        run: yarn lint:docs
+        run: pnpm lint:docs
         continue-on-error: true
 
   # 构建作业
@@ -68,13 +70,15 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+          cache: 'pnpm'
 
-      - name: 启用Yarn
-        run: corepack enable
+      - name: 设置pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
 
       - name: 安装依赖
-        run: yarn install --frozen-lockfile
+        run: pnpm install --frozen-lockfile
 
       - name: 复制OpenAPI文件到public目录
         run: |
@@ -82,7 +86,7 @@ jobs:
           cp openapi.json docs/public/
 
       - name: 构建文档
-        run: yarn docs:build
+        run: pnpm docs:build
         env:
           NODE_ENV: production
 
