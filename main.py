@@ -50,6 +50,9 @@ app = FastAPI(
     description=app_config.description,
     version=app_config.version,
     debug=app_config.debug,
+    docs_url=None if not app_config.debug else "/docs",
+    redoc_url=None if not app_config.debug else "/redoc",
+    openapi_url=None if not app_config.debug else "/openapi.json",  
 )
 
 # CORS配置
@@ -60,6 +63,11 @@ app.add_middleware(
     allow_methods=app_config.cors_allow_methods,
     allow_headers=app_config.cors_allow_headers,
 )
+
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
+
 app.include_router(invite_router)
 app.include_router(jwc_router)
 app.include_router(login_router)
