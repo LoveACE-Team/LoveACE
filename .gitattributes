@@ -1,0 +1,121 @@
+# LoveAC Project .gitattributes
+# 语言检测和统计配置
+
+# ==============================================
+# 语言检测配置
+# ==============================================
+
+# 主要编程语言
+*.py linguist-language=Python
+*.ts linguist-language=TypeScript
+*.js linguist-language=JavaScript
+*.vue linguist-language=Vue
+
+# 配置和数据文件
+*.json linguist-language=JSON
+*.yaml linguist-language=YAML
+*.yml linguist-language=YAML
+*.toml linguist-language=TOML
+*.ini linguist-language=INI
+
+# 文档文件
+*.md linguist-documentation
+*.rst linguist-documentation
+*.txt linguist-documentation
+
+# 忽略自动生成的文件
+pdm.lock linguist-generated
+yarn.lock linguist-generated
+package-lock.json linguist-generated
+.pnp.cjs linguist-generated
+.pnp.loader.mjs linguist-generated
+
+# 忽略第三方和依赖文件
+node_modules/ linguist-vendored
+__pycache__/ linguist-generated
+.venv/ linguist-vendored
+venv/ linguist-vendored
+.idea/ linguist-vendored
+.vscode/ linguist-vendored
+
+# 忽略构建输出
+dist/ linguist-generated
+build/ linguist-generated
+docs/.vitepress/dist/ linguist-generated
+
+# 忽略日志和缓存
+*.log linguist-generated
+logs/ linguist-generated
+.cache/ linguist-generated
+
+# 忽略自动生成的API文档
+docs/api/ linguist-generated=true
+openapi.json linguist-generated
+
+# ==============================================
+# 行结束符配置
+# ==============================================
+
+# 默认行为：自动检测，签出时转换为平台默认
+* text=auto
+
+# 强制LF行结束符的文件
+*.py text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+*.vue text eol=lf
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.sh text eol=lf
+
+# 强制CRLF行结束符的文件
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制文件
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+
+# ==============================================
+# 差异查看配置
+# ==============================================
+
+# 图片文件使用外部工具查看差异
+*.png diff=exif
+*.jpg diff=exif
+*.jpeg diff=exif
+*.gif diff=exif
+
+# 文档文件的差异配置
+*.md diff=markdown
+*.rst diff=markdown
+
+# ==============================================
+# 合并配置
+# ==============================================
+
+# 配置文件冲突时使用union合并策略
+*.md merge=union
+CHANGELOG.md merge=union
+README.md merge=union
+
+# ==============================================
+# 过滤器配置
+# ==============================================
+
+# 敏感信息过滤
+config.json filter=remove-secrets
+*.key filter=remove-secrets
+*.pem filter=remove-secrets

@@ -1,0 +1,33 @@
+[project]
+name = "LoveACE"
+version = "0.0.1"
+description = "NOOOOOOOOOOO"
+authors = [
+    {name = "Sibuxiangx", email = "sibuxiang@proton.me"},
+]
+dependencies = [
+    "fastapi>=0.115.12",
+    "uvicorn>=0.34.2",
+    "httpx>=0.28.1",
+    "cryptography>=45.0.3",
+    "rich>=14.0.0",
+    "richuru>=0.1.1",
+    "aiomysql>=0.2.0",
+    "sqlalchemy[asyncio]>=2.0.41",
+    "aiosqlite>=0.21.0",
+    "bs4>=0.0.2",
+    "aiofiles>=24.1.0",
+    "textual>=5.2.0",
+    "aioboto3>=15.0.0",
+]
+requires-python = "==3.12.*"
+readme = "README.md"
+license = {text = "MIT"}
+
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1.0",
+]
+[tool.pdm]
+distribution = false

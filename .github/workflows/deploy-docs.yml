@@ -1,0 +1,109 @@
+name: 部署文档
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'openapi.json'
+      - 'package.json'
+      - 'yarn.lock'
+      - '.github/workflows/deploy-docs.yml'
+  
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # 验证和检查作业
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+
+      - name: 启用Yarn
+        run: corepack enable
+
+      - name: 安装依赖
+        run: yarn install --frozen-lockfile
+
+      - name: 验证OpenAPI规范
+        run: yarn swagger:validate
+
+      - name: 检查Markdown文档
+        run: yarn lint:docs
+        continue-on-error: true
+
+  # 构建作业
+  build:
+    runs-on: ubuntu-latest
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+
+      - name: 启用Yarn
+        run: corepack enable
+
+      - name: 安装依赖
+        run: yarn install --frozen-lockfile
+
+      - name: 复制OpenAPI文件到public目录
+        run: |
+          mkdir -p docs/public
+          cp openapi.json docs/public/
+
+      - name: 构建文档
+        run: yarn docs:build
+        env:
+          NODE_ENV: production
+
+      - name: 设置Pages
+        uses: actions/configure-pages@v4
+
+      - name: 上传构建产物
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/.vitepress/dist
+
+  # 部署作业
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+      - name: 部署到GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
