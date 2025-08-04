@@ -14,10 +14,11 @@ from config import config_manager
 from config.logger import setup_logger, get_logger
 
 # 初始化日志系统
+install()
 setup_logger()
 logger = get_logger()
 
-install()
+
 
 
 @asynccontextmanager
