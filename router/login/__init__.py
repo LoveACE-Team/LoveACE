@@ -95,7 +95,7 @@ async def check_auth_status(
                 userid=user.userid
             ),
         )
-    except Exception as e:
+    except Exception:
         # token无效或其他错误
         return AuthmeResponse(
             code=401,

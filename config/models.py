@@ -27,6 +27,16 @@ class DatabaseConfig(BaseModel):
     pool_recycle: int = Field(default=3600, description="连接回收时间(秒)")
 
 
+class ISIMConfig(BaseModel):
+    """ISIM后勤电费系统配置"""
+    base_url: str = Field(
+        default="http://hqkd-aufe-edu-cn.vpn2.aufe.edu.cn/",
+        description="ISIM系统基础URL"
+    )
+    session_timeout: int = Field(default=1800, description="会话超时时间(秒)")
+    retry_times: int = Field(default=3, description="请求重试次数")
+
+
 class AUFEConfig(BaseModel):
     """AUFE连接配置"""
     default_timeout: int = Field(default=30, description="默认超时时间(秒)")
@@ -140,6 +150,7 @@ class Settings(BaseModel):
     """主配置类"""
     database: DatabaseConfig = Field(default_factory=DatabaseConfig)
     aufe: AUFEConfig = Field(default_factory=AUFEConfig)
+    isim: ISIMConfig = Field(default_factory=ISIMConfig)
     s3: S3Config = Field(default_factory=S3Config)
     log: LogConfig = Field(default_factory=LogConfig)
     app: AppConfig = Field(default_factory=AppConfig)

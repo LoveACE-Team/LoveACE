@@ -5,19 +5,16 @@ from provider.aufe.aac.model import (
     LoveACScoreInfo,
     LoveACScoreInfoResponse,
     LoveACScoreListResponse,
-    SimpleResponse,
     ErrorLoveACScoreInfo,
-    ErrorLoveACScoreInfoResponse,
     ErrorLoveACScoreListResponse,
     ErrorLoveACScoreCategory,
 )
 from provider.aufe.client import (
     AUFEConnection, 
-    AUFEConfig, 
+    aufe_config_global, 
     activity_tracker, 
     retry_async,
     AUFEConnectionError,
-    AUFELoginError,
     AUFEParseError,
     RetryConfig
 )
@@ -123,7 +120,7 @@ class AACClient:
     def _get_default_headers(self) -> dict:
         """获取默认请求头"""
         return {
-            **AUFEConfig.DEFAULT_HEADERS,
+            **aufe_config_global.DEFAULT_HEADERS,
             "ticket": self.system_token or "",
             "sdp-app-session": self.twfid or "",
         }
@@ -141,7 +138,7 @@ class AACClient:
             AUFEConnectionError: 连接失败
         """
         try:
-            headers = AUFEConfig.DEFAULT_HEADERS.copy()
+            headers = aufe_config_global.DEFAULT_HEADERS.copy()
             
             response = await self.vpn_connection.requester().get(
                 f"{self.web_url}/", headers=headers

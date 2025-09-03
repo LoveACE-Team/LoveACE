@@ -2,7 +2,6 @@ import sys
 from pathlib import Path
 from richuru import install
 from loguru import logger
-from typing import Any, Dict
 
 from .manager import config_manager
 

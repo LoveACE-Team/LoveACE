@@ -28,6 +28,7 @@ license = {text = "MIT"}
 [project.optional-dependencies]
 dev = [
     "black>=25.1.0",
+    "ruff>=0.12.11",
 ]
 [tool.pdm]
 distribution = false

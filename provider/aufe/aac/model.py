@@ -98,7 +98,7 @@ class ErrorLoveACScoreListResponse(LoveACScoreListResponse):
 
     code: int = -1
     msg: str = "网络请求失败，已进行多次重试"
-    data: Optional[List[ErrorLoveACScoreCategory]] = [
+    data: Optional[List["ErrorLoveACScoreCategory"]] = [
         ErrorLoveACScoreCategory(
             ID="error", ShowNum=-1, TypeName="请求失败", TotalScore=-1.0, children=[]
         )

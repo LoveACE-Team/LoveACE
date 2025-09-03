@@ -1,4 +1,3 @@
-import json
 import uuid
 from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,7 +6,6 @@ from database.user import User, AuthME
 from sqlalchemy import select, desc
 from pydantic import BaseModel
 from loguru import logger
-from typing import Optional
 
 
 class AuthmeRequest(BaseModel):

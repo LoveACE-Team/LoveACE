@@ -4,7 +4,7 @@ from fastapi.routing import APIRouter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from database.creator import get_db_session
-from database.user import UserProfile, User
+from database.user import UserProfile
 from provider.loveac.authme import fetch_user_by_token, AuthmeRequest
 from utils.file_manager import file_manager
 from .model import (

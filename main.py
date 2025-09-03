@@ -6,6 +6,7 @@ from router.jwc import jwc_router
 from router.login import login_router
 from router.aac import aac_router
 from router.user import user_router
+from router.isim import isim_router
 from richuru import install
 from fastapi.middleware.cors import CORSMiddleware as allow_origins
 import uvicorn  
@@ -74,6 +75,7 @@ app.include_router(jwc_router)
 app.include_router(login_router)
 app.include_router(aac_router)
 app.include_router(user_router)
+app.include_router(isim_router)
 
 if __name__ == "__main__":
     uvicorn.run(app, host=app_config.host, port=app_config.port)

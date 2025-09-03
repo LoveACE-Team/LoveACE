@@ -22,11 +22,10 @@ from provider.aufe.jwc.model import (
 )
 from provider.aufe.client import (
     AUFEConnection,
-    AUFEConfig,
+    aufe_config_global,
     activity_tracker,
     retry_async,
     AUFEConnectionError,
-    AUFELoginError,
     AUFEParseError,
     RetryConfig
 )
@@ -82,7 +81,7 @@ class JWCClient:
         
     def _get_default_headers(self) -> dict:
         """获取默认请求头"""
-        return AUFEConfig.DEFAULT_HEADERS.copy()
+        return aufe_config_global.DEFAULT_HEADERS.copy()
         
     def _get_endpoint_url(self, endpoint: str) -> str:
         """获取端点完整URL"""
@@ -238,12 +237,40 @@ class JWCClient:
                 grade="",
             )
             
+        def _convert_term_format(zxjxjhh: str) -> str:
+            """
+            转换学期格式
+            xxxx-yyyy-1-1 -> xxxx-yyyy秋季学期
+            xxxx-yyyy-2-1 -> xxxx-yyyy春季学期
+            
+            Args:
+                zxjxjhh: 学期代码，如 "2025-2026-1-1"
+                
+            Returns:
+                str: 转换后的学期名称，如 "2025-2026秋季学期"
+            """
+            try:
+                parts = zxjxjhh.split("-")
+                if len(parts) >= 3:
+                    year_start = parts[0]
+                    year_end = parts[1]
+                    semester_num = parts[2]
+                    
+                    if semester_num == "1":
+                        return f"{year_start}-{year_end}秋季学期"
+                    elif semester_num == "2":
+                        return f"{year_start}-{year_end}春季学期"
+                        
+                return zxjxjhh  # 如果格式不匹配，返回原值
+            except Exception:
+                return zxjxjhh
+            
         try:
             logger.info("开始获取培养方案信息")
 
             headers = self._get_default_headers()
 
-            # 使用重试机制
+            # 使用重试机制获取培养方案基本信息
             plan_response = await self.vpn_connection.model_request(
                 model=TrainingPlanResponseWrapper,
                 url=f"{self.base_url}/main/showPyfaInfo?sf_request_type=ajax",
@@ -272,13 +299,46 @@ class JWCClient:
             major_match = re.search(r"\d{4}级(.+?)本科", plan_name)
             major_name = major_match.group(1) if major_match else ""
 
+            # 获取学术信息来补全学期和课程数量信息
+            term_name = ""
+            course_count = 0
+            
+            try:
+                # 调用学术信息接口获取当前学期和课程数量
+                academic_response = await self.vpn_connection.requester().post(
+                    f"{self.base_url}/main/academicInfo?sf_request_type=ajax",
+                    headers=headers,
+                    data={"flag": ""},
+                    follow_redirects=True,
+                )
+                
+                if academic_response.status_code == 200:
+                    academic_data = academic_response.json()
+                    if academic_data and isinstance(academic_data, list) and len(academic_data) > 0:
+                        academic_item = academic_data[0]
+                        
+                        # 获取学期代码并转换格式
+                        zxjxjhh = academic_item.get("zxjxjhh", "")
+                        if zxjxjhh:
+                            term_name = _convert_term_format(zxjxjhh)
+                            logger.info(f"从学术信息获取学期: {zxjxjhh} -> {term_name}")
+                        
+                        # 获取课程数量
+                        course_count = academic_item.get("courseNum", 0)
+                        logger.info(f"从学术信息获取课程数量: {course_count}")
+                        
+            except Exception as e:
+                logger.warning(f"获取学术信息补全培养方案失败: {str(e)}")
+                # 使用默认值
+                term_name = "当前学期"
+
             # 转换为TrainingPlanInfo格式返回
             return TrainingPlanInfo(
                 pyfa=plan_name,
                 major=major_name,
                 grade=grade,
-                term="2024-2025春季学期",  # 从学术信息获取更准确
-                courseCount=0,  # 默认值，需要从其他接口获取
+                term=term_name,
+                courseCount=course_count,
             )
             
         except (AUFEConnectionError, AUFEParseError) as e:

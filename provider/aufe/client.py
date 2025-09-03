@@ -4,7 +4,7 @@ import binascii
 import asyncio
 import time
 import random
-from typing import Optional, Dict, Any, Type, Callable, Union, List
+from typing import Optional, Dict, Any, Type, Callable, TypeVar, Awaitable, ParamSpec
 from contextvars import ContextVar
 from functools import wraps
 from enum import Enum
@@ -16,7 +16,6 @@ from cryptography.hazmat.primitives import padding as symmetric_padding
 from base64 import b64encode
 from bs4 import BeautifulSoup
 from loguru import logger
-from typing import TypeVar
 
 from pydantic import BaseModel
 
@@ -28,11 +27,15 @@ vpn_context_var: ContextVar[Dict[str, Any]] = ContextVar("vpn_context", default=
 # 全局AUFE连接池
 _aufe_connections: Dict[str, "AUFEConnection"] = {}
 
+# 类型变量定义
 T_BaseModel = TypeVar("T_BaseModel", bound=Type[BaseModel])
+P = ParamSpec("P")
+T = TypeVar("T")
+F = TypeVar("F", bound=Callable[..., Any])
 
 
 # 导入配置管理器
-from config import config_manager
+from config import config_manager # noqa: E402
 
 def get_aufe_config():
     """获取AUFE配置"""
@@ -43,23 +46,23 @@ class AUFEConfig:
     """AUFE连接配置常量（从配置文件读取）"""
     
     @property
-    def DEFAULT_TIMEOUT(self):
+    def DEFAULT_TIMEOUT(self) -> int:
         return get_aufe_config().default_timeout
     
     @property
-    def MAX_RETRIES(self):
+    def MAX_RETRIES(self) -> int:
         return get_aufe_config().max_retries
     
     @property
-    def MAX_RECONNECT_RETRIES(self):
+    def MAX_RECONNECT_RETRIES(self) -> int:
         return get_aufe_config().max_reconnect_retries
     
     @property
-    def ACTIVITY_TIMEOUT(self):
+    def ACTIVITY_TIMEOUT(self) -> int:
         return get_aufe_config().activity_timeout
     
     @property
-    def MONITOR_INTERVAL(self):
+    def MONITOR_INTERVAL(self) -> int:
         return get_aufe_config().monitor_interval
     
     @property
@@ -87,7 +90,7 @@ class AUFEConfig:
         return get_aufe_config().default_headers
 
 # 创建全局实例以保持向后兼容性
-AUFEConfig = AUFEConfig()
+aufe_config_global = AUFEConfig()
 
 
 class AUFEError(Exception):
@@ -126,16 +129,16 @@ class RetryStrategy(Enum):
 @dataclass
 class RetryConfig:
     """重试配置"""
-    max_attempts: int = AUFEConfig.MAX_RETRIES
+    max_attempts: int = aufe_config_global.MAX_RETRIES
     strategy: RetryStrategy = RetryStrategy.EXPONENTIAL_BACKOFF
-    base_delay: float = AUFEConfig.RETRY_BASE_DELAY
-    max_delay: float = AUFEConfig.RETRY_MAX_DELAY
-    exponential_base: float = AUFEConfig.RETRY_EXPONENTIAL_BASE
+    base_delay: float = aufe_config_global.RETRY_BASE_DELAY
+    max_delay: float = aufe_config_global.RETRY_MAX_DELAY
+    exponential_base: float = aufe_config_global.RETRY_EXPONENTIAL_BASE
     jitter: bool = True
     retry_on_exceptions: tuple = (AUFEConnectionError, AUFETimeoutError, httpx.RequestError)
     
 
-def activity_tracker(func: Callable) -> Callable:
+def activity_tracker(func: F) -> F:
     """活动跟踪装饰器"""
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -149,7 +152,7 @@ def activity_tracker(func: Callable) -> Callable:
             self._update_activity()
         return await func(self, *args, **kwargs)
     
-    return async_wrapper if asyncio.iscoroutinefunction(func) else wrapper
+    return async_wrapper if asyncio.iscoroutinefunction(func) else wrapper  # type: ignore
 
 
 def retry_async(config: Optional[RetryConfig] = None):
@@ -157,10 +160,10 @@ def retry_async(config: Optional[RetryConfig] = None):
     if config is None:
         config = RetryConfig()
     
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, Awaitable[T]]) -> Callable[P, Awaitable[T]]:
         @wraps(func)
-        async def wrapper(*args, **kwargs):
-            last_exception = None
+        async def wrapper(*args: P.args, **kwargs: P.kwargs) -> T:
+            last_exception: Optional[Exception] = None
             
             for attempt in range(config.max_attempts):
                 try:
@@ -181,8 +184,12 @@ def retry_async(config: Optional[RetryConfig] = None):
                     # 非重试异常直接抛出
                     raise e
             
+            # 如果所有重试都失败，抛出最后一个异常
             if last_exception:
                 raise last_exception
+            else:
+                # 这种情况理论上不应该发生，但为了类型检查添加
+                raise RuntimeError("未知错误：重试失败但没有异常")
                 
         return wrapper
     return decorator
@@ -248,7 +255,7 @@ class AUFEConnection:
         self, 
         server: str, 
         student_id: Optional[str] = None,
-        timeout: float = AUFEConfig.DEFAULT_TIMEOUT,
+        timeout: float = aufe_config_global.DEFAULT_TIMEOUT,
         retry_config: Optional[RetryConfig] = None
     ) -> None:
         """
@@ -281,8 +288,8 @@ class AUFEConnection:
         self._cache_ttl: float = 300  # 5分钟缓存
         
         # 大学登录相关属性
-        self.uaap_base_url = AUFEConfig.UAAP_BASE_URL
-        self.uaap_login_url = AUFEConfig.UAAP_LOGIN_URL
+        self.uaap_base_url = aufe_config_global.UAAP_BASE_URL
+        self.uaap_login_url = aufe_config_global.UAAP_LOGIN_URL
         self.uaap_cookies: Optional[Dict[str, str]] = None
         self._uaap_logged_in: bool = False
 
@@ -299,7 +306,7 @@ class AUFEConnection:
         return httpx.AsyncClient(
             verify=False,
             timeout=self.timeout,
-            headers=AUFEConfig.DEFAULT_HEADERS.copy()
+            headers=aufe_config_global.DEFAULT_HEADERS.copy()
         )
 
     def _update_activity(self) -> None:
@@ -315,10 +322,10 @@ class AUFEConnection:
         """监控自动关闭和健康检查"""
         try:
             while not self._is_closed:
-                await asyncio.sleep(AUFEConfig.MONITOR_INTERVAL)
+                await asyncio.sleep(aufe_config_global.MONITOR_INTERVAL)
                 
                 # 检查不活动超时
-                if time.time() - self.last_activity > AUFEConfig.ACTIVITY_TIMEOUT:
+                if time.time() - self.last_activity > aufe_config_global.ACTIVITY_TIMEOUT:
                     logger.info(f"由于不活动，自动关闭学生 {self.student_id} 的VPN连接")
                     await self.close()
                     break
@@ -578,7 +585,7 @@ class AUFEConnection:
             AUFEConnectionError: 连接失败
         """
 
-        headers = AUFEConfig.DEFAULT_HEADERS.copy()
+        headers = aufe_config_global.DEFAULT_HEADERS.copy()
 
         try:
             # 步骤1: 获取登录页面以检索必要的令牌
@@ -714,7 +721,7 @@ class AUFEConnection:
         """
         self._update_activity()
 
-        headers = AUFEConfig.DEFAULT_HEADERS.copy()
+        headers = aufe_config_global.DEFAULT_HEADERS.copy()
 
         cookies = self.uaap_cookies if use_uaap_cookies else None
 
@@ -748,7 +755,7 @@ class AUFEConnection:
         """
         logger.info(f"跟踪重定向到: {redirect_url}")
 
-        headers = AUFEConfig.DEFAULT_HEADERS.copy()
+        headers = aufe_config_global.DEFAULT_HEADERS.copy()
 
         try:
             response = await self.session.get(
@@ -1054,7 +1061,7 @@ class AUFEConnection:
         """
         return (
             not self._is_closed 
-            and (time.time() - self.last_activity < AUFEConfig.ACTIVITY_TIMEOUT)
+            and (time.time() - self.last_activity < aufe_config_global.ACTIVITY_TIMEOUT)
             and self._health.is_healthy
         )
 
@@ -1078,7 +1085,7 @@ class AUFEConnection:
         cls, 
         server: str, 
         student_id: str,
-        timeout: float = AUFEConfig.DEFAULT_TIMEOUT,
+        timeout: float = aufe_config_global.DEFAULT_TIMEOUT,
         retry_config: Optional[RetryConfig] = None
     ) -> "AUFEConnection":
         """

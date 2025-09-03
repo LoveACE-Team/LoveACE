@@ -45,7 +45,7 @@ class DatabaseManager:
             logger.error(f"数据库连接初始化失败: {e}")
             logger.error(f"数据库连接URL: {db_config.url}")
             logger.error(f"数据库连接配置: {db_config}")
-            logger.error(f"请启动config_tui.py来配置数据库连接")
+            logger.error("请启动config_tui.py来配置数据库连接")
             raise 
         logger.info("数据库连接初始化完成")
 
