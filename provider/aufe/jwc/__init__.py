@@ -1,4 +1,5 @@
 import re
+import json
 import asyncio
 from typing import List, Optional, Dict
 from loguru import logger
@@ -20,6 +21,16 @@ from provider.aufe.jwc.model import (
     ErrorAcademicInfo,
     ErrorTrainingPlanInfo,
 )
+from provider.aufe.jwc.plan_completion_model import (
+    PlanCompletionInfo,
+    PlanCompletionCategory,
+    PlanCompletionCourse,
+    ErrorPlanCompletionInfo,
+)
+from provider.aufe.jwc.semester_week_model import (
+    SemesterWeekInfo,
+    ErrorSemesterWeekInfo,
+)
 from provider.aufe.client import (
     AUFEConnection,
     aufe_config_global,
@@ -40,6 +51,7 @@ class JWCConfig:
     ENDPOINTS = {
         "academic_info": "/student/integratedQuery/scoreQuery/index",
         "training_plan": "/student/integratedQuery/planCompletion/index",
+        "plan_completion": "/student/integratedQuery/planCompletion/index",
         "course_selection_status": "/main/checkSelectCourseStatus?sf_request_type=ajax",
         "evaluation_token": "/student/teachingEvaluation/evaluation/index", 
         "course_list": "/student/teachingEvaluation/teachingEvaluation/search?sf_request_type=ajax",
@@ -904,7 +916,7 @@ class JWCClient:
         """
 
         try:
-            url = f"{self.base_url}/student/integratedQuery/scoreQuery/allTermScores/index"
+            url = f"{self.base_url}/student/courseSelect/calendarSemesterCurriculum/index"
 
             headers = {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
@@ -928,7 +940,7 @@ class JWCClient:
             soup = BeautifulSoup(response.text, "html.parser")
 
             # 查找学期选择下拉框
-            select_element = soup.find("select", {"id": "zxjxjhh"})
+            select_element = soup.find("select", {"id": "planCode"})
             if not select_element:
                 logger.error("未找到学期选择框")
                 return {}
@@ -1386,3 +1398,379 @@ class JWCClient:
         except Exception as e:
             logger.error(f"获取处理后的课表数据异常: {str(e)}")
             return None
+
+    # ==================== 培养方案完成情况相关方法 ====================
+
+    @activity_tracker
+    @retry_async()
+    async def fetch_plan_completion_info(self) -> PlanCompletionInfo:
+        """
+        获取培养方案完成情况信息，使用重试机制
+
+        Returns:
+            PlanCompletionInfo: 培养方案完成情况信息，失败时返回错误模型
+        """
+        def _create_error_completion_info(error_msg: str = "请求失败，请稍后重试") -> ErrorPlanCompletionInfo:
+            """创建错误培养方案完成情况信息"""
+            return ErrorPlanCompletionInfo(
+                plan_name=error_msg,
+                major="请求失败",
+                grade="",
+                total_categories=-1,
+                total_courses=-1,
+                passed_courses=-1,
+                failed_courses=-1,
+                unread_courses=-1
+            )
+            
+        try:
+            logger.info("开始获取培养方案完成情况信息")
+
+            headers = self._get_default_headers()
+
+            # 请求培养方案完成情况页面
+            response = await self.vpn_connection.requester().get(
+                f"{self.base_url}/student/integratedQuery/planCompletion/index",
+                headers=headers,
+                follow_redirects=True,
+            )
+
+            if response.status_code != 200:
+                raise AUFEConnectionError(f"获取培养方案完成情况页面失败，状态码: {response.status_code}")
+
+            html_content = response.text
+            
+            # 使用BeautifulSoup解析HTML
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # 提取培养方案名称
+            plan_name = ""
+            
+            # 查找包含"培养方案"的h4标签
+            h4_elements = soup.find_all("h4")
+            for h4 in h4_elements:
+                text = h4.get_text(strip=True) if h4 else ""
+                if "培养方案" in text:
+                    plan_name = text
+                    logger.info(f"找到培养方案标题: {plan_name}")
+                    break
+
+            # 解析专业和年级信息
+            major = ""
+            grade = ""
+            if plan_name:
+                grade_match = re.search(r"(\d{4})级", plan_name)
+                if grade_match:
+                    grade = grade_match.group(1)
+                
+                major_match = re.search(r"\d{4}级(.+?)本科", plan_name)
+                if major_match:
+                    major = major_match.group(1)
+
+            # 查找zTree数据
+            ztree_data = []
+            
+            # 在script标签中查找zTree初始化数据
+            scripts = soup.find_all("script")
+            for script in scripts:
+                try:
+                    script_text = script.get_text() if script else ""
+                    if "$.fn.zTree.init" in script_text and "flagId" in script_text:
+                        logger.info("找到包含zTree初始化的script标签")
+                        
+                        # 提取zTree数据
+                        # 尝试多种模式匹配
+                        patterns = [
+                            r'\$\.fn\.zTree\.init\(\$\("#treeDemo"\),\s*setting,\s*(\[.*?\])\s*\);',
+                            r'\.zTree\.init\([^,]+,\s*[^,]+,\s*(\[.*?\])\s*\);',
+                            r'init\(\$\("#treeDemo"\)[^,]*,\s*[^,]*,\s*(\[.*?\])',
+                        ]
+                        
+                        json_part = None
+                        for pattern in patterns:
+                            match = re.search(pattern, script_text, re.DOTALL)
+                            if match:
+                                json_part = match.group(1)
+                                logger.info(f"使用模式匹配成功提取zTree数据: {len(json_part)}字符")
+                                break
+                        
+                        if json_part:
+                            # 清理和修复JSON格式
+                            # 移除JavaScript注释和多余的逗号
+                            json_part = re.sub(r'//.*?\n', '\n', json_part)
+                            json_part = re.sub(r'/\*.*?\*/', '', json_part, flags=re.DOTALL)
+                            json_part = re.sub(r',\s*}', '}', json_part)
+                            json_part = re.sub(r',\s*]', ']', json_part)
+                            
+                            try:
+                                ztree_data = json.loads(json_part)
+                                logger.info(f"JSON解析成功，共{len(ztree_data)}个节点")
+                                break
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"JSON解析失败: {str(e)}")
+                                # 如果JSON解析失败，不使用手动解析，直接跳过
+                                continue
+                        else:
+                            logger.warning("未能通过模式匹配提取zTree数据")
+                            continue
+                except Exception:
+                    continue
+
+            if not ztree_data:
+                logger.warning("未找到有效的zTree数据")
+                
+                # 输出调试信息
+                logger.debug(f"HTML内容长度: {len(html_content)}")
+                logger.debug(f"找到的script标签数量: {len(soup.find_all('script'))}")
+                
+                # 检查是否包含关键词
+                contains_ztree = "zTree" in html_content
+                contains_flagid = "flagId" in html_content
+                contains_plan = "培养方案" in html_content
+                
+                logger.debug(f"HTML包含关键词: zTree={contains_ztree}, flagId={contains_flagid}, 培养方案={contains_plan}")
+                
+                if contains_plan:
+                    logger.warning("检测到培养方案内容，但zTree数据解析失败，可能页面结构已变化")
+                else:
+                    logger.warning("未检测到培养方案相关内容，可能需要重新登录或检查访问权限")
+                    
+                return _create_error_completion_info("未找到培养方案数据，请检查登录状态或访问权限")
+
+            # 解析zTree数据构建分类和课程信息
+            completion_info = self._build_completion_info_from_ztree(
+                ztree_data, plan_name, major, grade
+            )
+            
+            logger.info(
+                f"培养方案完成情况获取成功: {completion_info.plan_name}, "
+                f"总分类数: {completion_info.total_categories}, "
+                f"总课程数: {completion_info.total_courses}"
+            )
+            
+            return completion_info
+            
+        except (AUFEConnectionError, AUFEParseError) as e:
+            logger.error(f"获取培养方案完成情况失败: {str(e)}")
+            return _create_error_completion_info(f"请求失败: {str(e)}")
+        except Exception as e:
+            logger.error(f"获取培养方案完成情况异常: {str(e)}")
+            return _create_error_completion_info()
+
+    def _build_completion_info_from_ztree(
+        self, 
+        ztree_data: List[dict], 
+        plan_name: str, 
+        major: str, 
+        grade: str
+    ) -> PlanCompletionInfo:
+        """从zTree数据构建培养方案完成情况信息"""
+        try:
+            # 按层级组织数据
+            nodes_by_id = {node["id"]: node for node in ztree_data}
+            root_categories = []
+            
+            # 统计根分类和所有节点信息，用于调试
+            all_parent_ids = set()
+            root_nodes = []
+            
+            for node in ztree_data:
+                parent_id = node.get("pId", "")
+                all_parent_ids.add(parent_id)
+                
+                # 根分类的判断条件：pId为"-1"（这是zTree中真正的根节点标识）
+                # 从HTML示例可以看出，真正的根分类的pId是"-1"
+                is_root_category = parent_id == "-1"
+                
+                if is_root_category:
+                    root_nodes.append(node)
+            
+            logger.info(f"zTree数据分析: 总节点数={len(ztree_data)}, 根节点数={len(root_nodes)}, 不同父ID数={len(all_parent_ids)}")
+            logger.debug(f"所有父ID: {sorted(all_parent_ids)}")
+            
+            # 构建分类树
+            for node in root_nodes:
+                category = PlanCompletionCategory.from_ztree_node(node)
+                self._populate_category_children(category, node["id"], nodes_by_id)
+                root_categories.append(category)
+                logger.debug(f"创建根分类: {category.category_name} (ID: {node['id']})")
+            
+            # 创建完成情况信息
+            completion_info = PlanCompletionInfo(
+                plan_name=plan_name,
+                major=major,
+                grade=grade,
+                categories=root_categories,
+                total_categories=0,
+                total_courses=0,
+                passed_courses=0,
+                failed_courses=0,
+                unread_courses=0
+            )
+            
+            # 计算统计信息
+            completion_info.calculate_statistics()
+            
+            return completion_info
+            
+        except Exception as e:
+            logger.error(f"构建培养方案完成情况信息异常: {str(e)}")
+            return ErrorPlanCompletionInfo(
+                plan_name="解析失败",
+                major="解析失败", 
+                grade="",
+                total_categories=-1,
+                total_courses=-1,
+                passed_courses=-1,
+                failed_courses=-1,
+                unread_courses=-1
+            )
+
+    def _populate_category_children(
+        self, 
+        category: PlanCompletionCategory, 
+        category_id: str, 
+        nodes_by_id: dict
+    ):
+        """填充分类的子分类和课程（支持多层嵌套）"""
+        try:
+            children_count = 0
+            subcategory_count = 0
+            course_count = 0
+            
+            for node in nodes_by_id.values():
+                if node.get("pId") == category_id:
+                    children_count += 1
+                    flag_type = node.get("flagType", "")
+                    
+                    if flag_type in ["001", "002"]:  # 分类或子分类
+                        subcategory = PlanCompletionCategory.from_ztree_node(node)
+                        # 递归处理子项，支持多层嵌套
+                        self._populate_category_children(subcategory, node["id"], nodes_by_id)
+                        category.subcategories.append(subcategory)
+                        subcategory_count += 1
+                    elif flag_type == "kch":  # 课程
+                        course = PlanCompletionCourse.from_ztree_node(node)
+                        category.courses.append(course)
+                        course_count += 1
+                    else:
+                        # 处理其他类型的节点，也可能是分类
+                        # 根据是否有子节点来判断是分类还是课程
+                        has_children = any(n.get("pId") == node["id"] for n in nodes_by_id.values())
+                        if has_children:
+                            # 有子节点，当作分类处理
+                            subcategory = PlanCompletionCategory.from_ztree_node(node)
+                            self._populate_category_children(subcategory, node["id"], nodes_by_id)
+                            category.subcategories.append(subcategory)
+                            subcategory_count += 1
+                        else:
+                            # 无子节点，当作课程处理
+                            course = PlanCompletionCourse.from_ztree_node(node)
+                            category.courses.append(course)
+                            course_count += 1
+            
+            if children_count > 0:
+                logger.debug(f"分类 '{category.category_name}' (ID: {category_id}) 的子项: 总数={children_count}, 子分类={subcategory_count}, 课程={course_count}")
+                        
+        except Exception as e:
+            logger.error(f"填充分类子项异常: {str(e)}")
+            logger.error(f"异常节点信息: category_id={category_id}, 错误详情: {str(e)}")
+
+    async def fetch_semester_week_info(self) -> SemesterWeekInfo:
+        """
+        获取当前学期周数信息
+
+        Returns:
+            SemesterWeekInfo: 学期周数信息，失败时返回错误模型
+        """
+        def _create_error_week_info(error_msg: str = "请求失败，请稍后重试") -> ErrorSemesterWeekInfo:
+            """创建错误学期周数信息"""
+            return ErrorSemesterWeekInfo(
+                academic_year=error_msg,
+                semester="请求失败",
+                week_number=-1,
+                is_end=False,
+                weekday="请求失败",
+                raw_text=""
+            )
+            
+        try:
+            logger.info("开始获取学期周数信息")
+
+            headers = self._get_default_headers()
+
+            # 请求主页以获取当前学期周数信息
+            response = await self.vpn_connection.requester().get(
+                f"{self.base_url}/",
+                headers=headers,
+                follow_redirects=True,
+            )
+
+            if response.status_code != 200:
+                raise AUFEConnectionError(f"获取学期周数信息页面失败，状态码: {response.status_code}")
+
+            html_content = response.text
+            
+            # 使用BeautifulSoup解析HTML
+            soup = BeautifulSoup(html_content, "html.parser")
+
+            # 查找包含学期周数信息的元素
+            # 使用CSS选择器查找
+            calendar_element = soup.select_one("#navbar-container > div.navbar-buttons.navbar-header.pull-right > ul > li.light-red > a")
+            
+            if not calendar_element:
+                # 如果CSS选择器失败，尝试其他方法
+                # 查找包含"第X周"的元素
+                potential_elements = soup.find_all("a", class_="dropdown-toggle")
+                calendar_element = None
+                
+                for element in potential_elements:
+                    text = element.get_text(strip=True) if element else ""
+                    if "第" in text and "周" in text:
+                        calendar_element = element
+                        break
+                
+                # 如果还是找不到，尝试查找任何包含学期信息的元素
+                if not calendar_element:
+                    all_elements = soup.find_all(text=re.compile(r'\d{4}-\d{4}.*第\d+周'))
+                    if all_elements:
+                        # 找到包含学期信息的文本，查找其父元素
+                        for text_node in all_elements:
+                            parent = text_node.parent
+                            if parent:
+                                calendar_element = parent
+                                break
+
+            if not calendar_element:
+                logger.warning("未找到学期周数信息元素")
+                
+                # 尝试在整个页面中搜索学期信息模式
+                semester_pattern = re.search(r'(\d{4}-\d{4})\s*(春|秋|夏)?\s*第(\d+)周\s*(星期[一二三四五六日天])?', html_content)
+                if semester_pattern:
+                    calendar_text = semester_pattern.group(0)
+                    logger.info(f"通过正则表达式找到学期信息: {calendar_text}")
+                else:
+                    logger.debug(f"HTML内容长度: {len(html_content)}")
+                    logger.debug("未检测到学期周数相关内容，可能需要重新登录或检查访问权限")
+                    return _create_error_week_info("未找到学期周数信息，请检查登录状态或访问权限")
+            else:
+                # 提取文本内容
+                calendar_text = calendar_element.get_text(strip=True)
+                logger.info(f"找到学期周数信息: {calendar_text}")
+
+            # 解析学期周数信息
+            week_info = SemesterWeekInfo.from_calendar_text(calendar_text)
+            
+            logger.info(
+                f"学期周数信息获取成功: {week_info.academic_year} {week_info.semester} "
+                f"第{week_info.week_number}周 {week_info.weekday}, 是否结束: {week_info.is_end}"
+            )
+            
+            return week_info
+            
+        except (AUFEConnectionError, AUFEParseError) as e:
+            logger.error(f"获取学期周数信息失败: {str(e)}")
+            return _create_error_week_info(f"请求失败: {str(e)}")
+        except Exception as e:
+            logger.error(f"获取学期周数信息异常: {str(e)}")
+            return _create_error_week_info()

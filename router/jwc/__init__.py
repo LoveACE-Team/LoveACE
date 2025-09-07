@@ -31,10 +31,15 @@ from .evaluate import (
     get_task_manager,
     remove_task_manager,
 )
+from .plan_completion import router as plan_completion_router
 from datetime import datetime
 from loguru import logger
 
 jwc_router = APIRouter(prefix="/api/v1/jwc")
+
+# 包含培养方案完成情况路由
+jwc_router.include_router(plan_completion_router)
+
 invite_tokens = []
 
 

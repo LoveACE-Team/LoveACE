@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = ["inherit_metadata"]
 lock_version = "4.5.0"
-content_hash = "sha256:906aa83c21919f8fa22d06361e5108ffb44a5c16d5e18ae54d1525c4601ba499"
+content_hash = "sha256:8a2a4fef253e4b00e323735a087cc66549c16d8bafbde85137037308c690618e"
 
 [[metadata.targets]]
 requires_python = "==3.12.*"
@@ -448,6 +448,55 @@ files = [
 ]
 
 [[package]]
+name = "granian"
+version = "2.5.2"
+requires_python = ">=3.9"
+summary = "A Rust HTTP server for Python applications"
+groups = ["default"]
+dependencies = [
+    "click>=8.0.0",
+]
+files = [
+    {file = "granian-2.5.2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:47b08d59491d75c1c0504cf982ea6a3594c58cc670436d9b6e4bcd625ab235e8"},
+    {file = "granian-2.5.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ec4982a68d22bb12f68c372ecaba680ca352d80e678ff8bfc1eab794267920c7"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1d356158ded2a6bb7246d5e0aa0730466ffad4f5eeac1e0067998a455de19d08"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7bdd088bc3bcd16df6f9507440baa51aadd4a5c8b6bdcd3b0338eddb9aa1d98f"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e809d0772a78e7f281be4e7a2ebd75ea84de646aacbe441cfaf37b73e3ab9a0d"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:c4884ded8219df93b5b1c708b55b2fa7bf060f31cb8833838cace48dcf8265f4"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:a84551eba12a8f1ac5433675ade603d987ff6523653e623ee0fe47e25ca846b2"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_armv7l.whl", hash = "sha256:fccfd74be22962afc3b241c52b5ee159378fb1bc1c39738386d82959b19d83e0"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:bdfef2a50a907cf6d6b8af6f06d1367a682a09dd4ecfd2a707e901494d2644a9"},
+    {file = "granian-2.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:cf1b83cb8b406ab37d484f8272f9d9efd28fbdf0a454f52b3be8c39dcf7425c8"},
+    {file = "granian-2.5.2.tar.gz", hash = "sha256:fdaa832a99745f74ca303ee587ae9ad5e3f0ab4a6e5a5d509619faabc7e5b1f0"},
+]
+
+[[package]]
+name = "granian"
+version = "2.5.2"
+extras = ["pname", "uvloop"]
+requires_python = ">=3.9"
+summary = "A Rust HTTP server for Python applications"
+groups = ["default"]
+dependencies = [
+    "granian==2.5.2",
+    "setproctitle~=1.3.3",
+    "uvloop>=0.18.0; platform_python_implementation == \"CPython\" and sys_platform != \"win32\"",
+]
+files = [
+    {file = "granian-2.5.2-cp312-cp312-macosx_10_12_x86_64.whl", hash = "sha256:47b08d59491d75c1c0504cf982ea6a3594c58cc670436d9b6e4bcd625ab235e8"},
+    {file = "granian-2.5.2-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:ec4982a68d22bb12f68c372ecaba680ca352d80e678ff8bfc1eab794267920c7"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_armv7l.manylinux2014_armv7l.whl", hash = "sha256:1d356158ded2a6bb7246d5e0aa0730466ffad4f5eeac1e0067998a455de19d08"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7bdd088bc3bcd16df6f9507440baa51aadd4a5c8b6bdcd3b0338eddb9aa1d98f"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e809d0772a78e7f281be4e7a2ebd75ea84de646aacbe441cfaf37b73e3ab9a0d"},
+    {file = "granian-2.5.2-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:c4884ded8219df93b5b1c708b55b2fa7bf060f31cb8833838cace48dcf8265f4"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_aarch64.whl", hash = "sha256:a84551eba12a8f1ac5433675ade603d987ff6523653e623ee0fe47e25ca846b2"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_armv7l.whl", hash = "sha256:fccfd74be22962afc3b241c52b5ee159378fb1bc1c39738386d82959b19d83e0"},
+    {file = "granian-2.5.2-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:bdfef2a50a907cf6d6b8af6f06d1367a682a09dd4ecfd2a707e901494d2644a9"},
+    {file = "granian-2.5.2-cp312-cp312-win_amd64.whl", hash = "sha256:cf1b83cb8b406ab37d484f8272f9d9efd28fbdf0a454f52b3be8c39dcf7425c8"},
+    {file = "granian-2.5.2.tar.gz", hash = "sha256:fdaa832a99745f74ca303ee587ae9ad5e3f0ab4a6e5a5d509619faabc7e5b1f0"},
+]
+
+[[package]]
 name = "greenlet"
 version = "3.2.2"
 requires_python = ">=3.9"
@@ -886,6 +935,28 @@ files = [
 ]
 
 [[package]]
+name = "setproctitle"
+version = "1.3.6"
+requires_python = ">=3.8"
+summary = "A Python module to customize the process title"
+groups = ["default"]
+files = [
+    {file = "setproctitle-1.3.6-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:af44bb7a1af163806bbb679eb8432fa7b4fb6d83a5d403b541b675dcd3798638"},
+    {file = "setproctitle-1.3.6-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:3cca16fd055316a48f0debfcbfb6af7cea715429fc31515ab3fcac05abd527d8"},
+    {file = "setproctitle-1.3.6-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ea002088d5554fd75e619742cefc78b84a212ba21632e59931b3501f0cfc8f67"},
+    {file = "setproctitle-1.3.6-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:bb465dd5825356c1191a038a86ee1b8166e3562d6e8add95eec04ab484cfb8a2"},
+    {file = "setproctitle-1.3.6-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d2c8e20487b3b73c1fa72c56f5c89430617296cd380373e7af3a538a82d4cd6d"},
+    {file = "setproctitle-1.3.6-cp312-cp312-manylinux_2_5_x86_64.manylinux1_x86_64.manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a0d6252098e98129a1decb59b46920d4eca17b0395f3d71b0d327d086fefe77d"},
+    {file = "setproctitle-1.3.6-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:cf355fbf0d4275d86f9f57be705d8e5eaa7f8ddb12b24ced2ea6cbd68fdb14dc"},
+    {file = "setproctitle-1.3.6-cp312-cp312-musllinux_1_2_i686.whl", hash = "sha256:e288f8a162d663916060beb5e8165a8551312b08efee9cf68302687471a6545d"},
+    {file = "setproctitle-1.3.6-cp312-cp312-musllinux_1_2_ppc64le.whl", hash = "sha256:b2e54f4a2dc6edf0f5ea5b1d0a608d2af3dcb5aa8c8eeab9c8841b23e1b054fe"},
+    {file = "setproctitle-1.3.6-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:b6f4abde9a2946f57e8daaf1160b2351bcf64274ef539e6675c1d945dbd75e2a"},
+    {file = "setproctitle-1.3.6-cp312-cp312-win32.whl", hash = "sha256:db608db98ccc21248370d30044a60843b3f0f3d34781ceeea67067c508cd5a28"},
+    {file = "setproctitle-1.3.6-cp312-cp312-win_amd64.whl", hash = "sha256:082413db8a96b1f021088e8ec23f0a61fec352e649aba20881895815388b66d3"},
+    {file = "setproctitle-1.3.6.tar.gz", hash = "sha256:c9f32b96c700bb384f33f7cf07954bb609d35dd82752cef57fb2ee0968409169"},
+]
+
+[[package]]
 name = "six"
 version = "1.17.0"
 requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
@@ -1061,6 +1132,23 @@ dependencies = [
 files = [
     {file = "uvicorn-0.34.2-py3-none-any.whl", hash = "sha256:deb49af569084536d269fe0a6d67e3754f104cf03aba7c11c40f01aadf33c403"},
     {file = "uvicorn-0.34.2.tar.gz", hash = "sha256:0e929828f6186353a80b58ea719861d2629d766293b6d19baf086ba31d4f3328"},
+]
+
+[[package]]
+name = "uvloop"
+version = "0.21.0"
+requires_python = ">=3.8.0"
+summary = "Fast implementation of asyncio event loop on top of libuv"
+groups = ["default"]
+marker = "platform_python_implementation == \"CPython\" and sys_platform != \"win32\""
+files = [
+    {file = "uvloop-0.21.0-cp312-cp312-macosx_10_13_universal2.whl", hash = "sha256:359ec2c888397b9e592a889c4d72ba3d6befba8b2bb01743f72fffbde663b59c"},
+    {file = "uvloop-0.21.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:f7089d2dc73179ce5ac255bdf37c236a9f914b264825fdaacaded6990a7fb4c2"},
+    {file = "uvloop-0.21.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:baa4dcdbd9ae0a372f2167a207cd98c9f9a1ea1188a8a526431eef2f8116cc8d"},
+    {file = "uvloop-0.21.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:86975dca1c773a2c9864f4c52c5a55631038e387b47eaf56210f873887b6c8dc"},
+    {file = "uvloop-0.21.0-cp312-cp312-musllinux_1_2_aarch64.whl", hash = "sha256:461d9ae6660fbbafedd07559c6a2e57cd553b34b0065b6550685f6653a98c1cb"},
+    {file = "uvloop-0.21.0-cp312-cp312-musllinux_1_2_x86_64.whl", hash = "sha256:183aef7c8730e54c9a3ee3227464daed66e37ba13040bb3f350bc2ddc040f22f"},
+    {file = "uvloop-0.21.0.tar.gz", hash = "sha256:3bf12b0fda68447806a7ad847bfa591613177275d35b6724b1ee573faa3704e3"},
 ]
 
 [[package]]

@@ -19,6 +19,7 @@ dependencies = [
     "aiofiles>=24.1.0",
     "textual>=5.2.0",
     "aioboto3>=15.0.0",
+    "granian[pname,uvloop]>=2.5.2",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"
